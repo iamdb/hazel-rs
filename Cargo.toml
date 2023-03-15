@@ -1,0 +1,8 @@
+[package]
+name = "hazel-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+notify = { version = "5.1", features = ["serde"] } 
+snafu = "0.7"
