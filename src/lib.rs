@@ -3,6 +3,7 @@ use snafu::prelude::*;
 use std::{io, time::SystemTimeError};
 
 pub mod job;
+pub mod parser;
 
 #[derive(Snafu, Debug)]
 pub enum AppError {
@@ -121,6 +122,8 @@ pub enum Specifier {
     Created,
     Modified,
     Accessed,
+    Subpath,
+    Type,
     Unknown,
 }
 
