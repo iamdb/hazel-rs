@@ -1,6 +1,11 @@
-token     = { ^"year" | ^"month" | ^"mime" | ^"extension" }
-specifier = { ^"created" | ^"modified" | ^"accessed" }
-modifier  = { ^"lowercase" | ^"uppercase" | ^"names" }
-variable  = { "{"{,1} ~ token ~ ":"? ~ specifier? ~ ":"? ~ (modifier ~ "|"? ~ modifier?)*? ~ "}"{,1} }
-text      = { (ASCII_ALPHANUMERIC ~ (" " | "_" | "!" | "." | "-" | "~" | "@")?)+ }
-path      = { ("/"{,1}? ~ (variable | text) ~ "/"{,1}?)+ }
+token      =  { ^"year" | ^"month" | ^"mime" | ^"extension" | ^"kind" | ^"size" }
+threshold  =  { ASCII_DIGIT+ }
+thresholds =  { "["? ~ (threshold+ ~ ","?)+ ~ "]"? }
+modifier   =  { ^"lowercase" | ^"uppercase" | ^"names" }
+modifiers  =  { modifier ~ "|"? ~ modifier? }
+specifier  =  { ^"created" | ^"modified" | ^"accessed" }
+variable   = ${ "{"{,1} ~ token ~ thresholds? ~ ":"? ~ specifier? ~ ":"? ~ modifiers? ~ "}"{,1} }
+text       =  { (ASCII_ALPHANUMERIC | " " | "_" | "!" | "." | "-" | "~" | "@")+ }
+item       =  { variable | text }
+component  =  { "/"{,1}? ~ item+ }
+path       =  { component+ }

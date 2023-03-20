@@ -25,7 +25,8 @@ fn main() -> Result<()> {
     let job = Job::new(
         &path,
         None,
-        "/{year:accessed}/test/{month:accessed}/{mime}/",
+        "/test/{month:created}-{year:created}/{mime}",
+        false,
     )?;
 
     job.run()?;

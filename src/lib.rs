@@ -15,6 +15,10 @@ pub enum AppError {
     IO {
         error: io::ErrorKind,
     },
+    #[snafu(display("There was an error."))]
+    FsExtra {
+        error: fs_extra::error::ErrorKind,
+    },
     #[snafu(display("{error}"))]
     SystemTimeError {
         error: SystemTimeError,
@@ -59,6 +63,12 @@ impl From<regex::Error> for AppError {
     }
 }
 
+impl From<fs_extra::error::Error> for AppError {
+    fn from(value: fs_extra::error::Error) -> Self {
+        Self::FsExtra { error: value.kind }
+    }
+}
+
 #[derive(Parser)]
 #[grammar = "pathspec.pest"]
 struct TokenParser;
@@ -69,6 +79,9 @@ impl From<&str> for Token {
             "year" => Self::Year,
             "month" => Self::Month,
             "mime" => Self::MimeType,
+            "extension" => Self::Extension,
+            "size" => Self::Size,
+            "kind" => Self::Kind,
             _ => Self::Unknown,
         }
     }
@@ -123,6 +136,11 @@ pub enum Token {
     Month,
     Year,
     MimeType,
+    Size,
+    Extension,
+    Width,
+    Height,
+    Kind,
     Unknown,
 }
 
