@@ -5,6 +5,7 @@ use std::{
 };
 
 pub struct Job<'d> {
+    name: &'d str,
     source: &'d str,
     destination: &'d str,
     pattern: &'d str,
@@ -14,6 +15,7 @@ pub struct Job<'d> {
 impl<'d> Job<'d> {
     /// Creates a new Job
     pub fn new(
+        name: &'d str,
         source: &'d str,
         destination: Option<&'d str>,
         pattern: &'d str,
@@ -27,6 +29,7 @@ impl<'d> Job<'d> {
         };
 
         Ok(Self {
+            name,
             destination,
             recursive,
             pattern,
@@ -39,6 +42,7 @@ impl<'d> Job<'d> {
         process_source(self.source, self.recursive, |entry| {
             let dest = parser::parse_pattern(self.pattern, entry)?;
 
+            println!("{}", self.name);
             println!(
                 "{}/{}/{}",
                 self.destination,

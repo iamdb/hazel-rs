@@ -2,7 +2,7 @@
 
 A utility to watch and organize folders inspired by Hazel for MacOS.
 
-This is very much an alpha version. No guarantees.
+This is very much an alpha version. Not everything in this README exists yet. No guarantees.
 
 ## Getting started
 
@@ -75,4 +75,6 @@ antyhing over the largest threshold is moved to that folder.
 - `size` (files only)
 - `kind` (application,image,video,etc., files only)
 - `mime` (organized into `type/subtype` folders, files only)
-- `file` extension (files only)
+  - `type` (only include type)
+  - `subtype` (only include subtype)
+- `extension` (file extension)
