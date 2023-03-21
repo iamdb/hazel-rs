@@ -1,18 +1,12 @@
-use hazel_rs::{job::Job, Result};
+use hazel_rs::{job::Jobs, Result};
 
 fn main() -> Result<()> {
-    let mut args = std::env::args().skip(1);
-    let path = args.next().unwrap();
+    let file = std::fs::read("jobs.sample.yaml")?;
+    let job_list: Jobs = serde_yaml::from_slice(&file).expect("failed to parse yaml");
 
-    let job = Job::new(
-        "Test Job",
-        &path,
-        None,
-        "/{year:created}/{month:created}/",
-        false,
-    )?;
-
-    job.run()?;
+    for job in job_list.jobs {
+        job.run()?;
+    }
 
     Ok(())
 }

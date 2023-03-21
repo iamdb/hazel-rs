@@ -1,6 +1,6 @@
 jobs:
   - name: Test
-    source: ~/Downloads
-    destination: ~/Backup # optional, if missing, will use source
+    source: /home/iamdb/Downloads
+    destination: /home/iamdb/Backup # optional, if missing, will use source
     pattern: /{year:created}/{month:created}
     recursive: false

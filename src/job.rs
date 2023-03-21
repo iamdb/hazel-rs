@@ -1,20 +1,28 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{parser, AppError, Result};
 use std::{
     fs::{self, DirEntry},
     path::Path,
 };
 
-pub struct Job<'d> {
-    name: &'d str,
-    source: &'d str,
-    destination: &'d str,
-    pattern: &'d str,
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub struct Job {
+    name: String,
+    source: String,
+    destination: String,
+    pattern: String,
     recursive: bool,
 }
 
-impl<'d> Job<'d> {
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
+pub struct Jobs {
+    pub jobs: Vec<Job>,
+}
+
+impl Job {
     /// Creates a new Job
-    pub fn new(
+    pub fn new<'d>(
         name: &'d str,
         source: &'d str,
         destination: Option<&'d str>,
@@ -29,18 +37,18 @@ impl<'d> Job<'d> {
         };
 
         Ok(Self {
-            name,
-            destination,
+            name: name.to_string(),
+            destination: destination.to_string(),
             recursive,
-            pattern,
-            source,
+            pattern: pattern.to_string(),
+            source: source.to_string(),
         })
     }
 
     /// Runs a Job
     pub fn run(&self) -> Result<()> {
-        process_source(self.source, self.recursive, |entry| {
-            let dest = parser::parse_pattern(self.pattern, entry)?;
+        process_source(&self.source, self.recursive, |entry| {
+            let dest = parser::parse_pattern(&self.pattern, entry)?;
 
             println!("{}", self.name);
             println!(
