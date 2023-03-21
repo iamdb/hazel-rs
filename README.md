@@ -2,16 +2,19 @@
 
 A utility to watch and organize folders inspired by Hazel for MacOS.
 
-This is very much an alpha version. Not everything in this README exists yet. No guarantees.
+This is very much an alpha version. No guarantees.
 
 ## Getting started
 
 - Create a `jobs.yaml` file
-- Define a job
+- Define a list of jobs in a yaml file
   ```yaml
-  - name: Sort Documents
-    source: "~/Documents"
-    pattern: "/{month:created}/{day:created}"
+  jobs:
+    - name: Sort Documents
+      source: "~/Documents"
+      destination: "~/Backup"
+      pattern: "/{month:created}/{day:created}"
+      recursive: false
   ```
 - Run job: `hazel-rs --config jobs.yaml`
 
@@ -23,7 +26,7 @@ the parsed, the variables replaced and then the resulting string is appended to 
 For example, this pattern sorts a directory into subdirectories by the month and year created:
 
 `{month:created}/{year:created}` => `2023/03/<item>`
-`{kind}/{size[500M, 1G, 10G]}` => `video/{500M,1G,10G}/<item>`
+`{kind}/{days[30,60,90]:created} days` => `audio/{30,60,90} days/<item>`
 
 ### Variables
 
@@ -55,7 +58,7 @@ Organize by file size:
 
 That will create a folder for each threshold and put the items into the appropriate directory.
 
-Note: These ultimately translate to `>30 || >60 || >90` so anything that isn't over the lowest threshold is ignored and
+**Note:** These ultimately translate to `>=30 || >=60 || >=90` so anything that isn't the same over over the lowest threshold is ignored and
 antyhing over the largest threshold is moved to that folder.
 
 #### List of Tokens and Specifiers

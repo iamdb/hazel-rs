@@ -50,7 +50,6 @@ impl Job {
         process_source(&self.source, self.recursive, |entry| {
             let dest = parser::parse_pattern(&self.pattern, entry)?;
 
-            println!("{}", self.name);
             println!(
                 "{}/{}/{}",
                 self.destination,

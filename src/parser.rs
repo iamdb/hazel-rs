@@ -211,6 +211,19 @@ fn _days_since_created(entry: &DirEntry) -> Result<Days> {
     }
 }
 
+#[derive(Debug)]
+pub enum Token {
+    Month,
+    Year,
+    MimeType,
+    Size,
+    Extension,
+    Width,
+    Height,
+    Kind,
+    Unknown,
+}
+
 impl From<&str> for Token {
     fn from(value: &str) -> Self {
         match value {
@@ -225,15 +238,13 @@ impl From<&str> for Token {
     }
 }
 
-impl From<&str> for Modifier {
-    fn from(value: &str) -> Self {
-        match value {
-            "lowercase" => Self::LowerCase,
-            "uppercase" => Self::UpperCase,
-            "names" => Self::Names,
-            _ => Self::Unkown,
-        }
-    }
+pub enum Specifier {
+    Created,
+    Modified,
+    Accessed,
+    Subpath,
+    Type,
+    Unknown,
 }
 
 impl From<&str> for Specifier {
@@ -247,23 +258,6 @@ impl From<&str> for Specifier {
     }
 }
 
-pub enum GroupBy {
-    DayOfWeek,
-    Month,
-    Year,
-    SizeRange,
-    DateRange,
-}
-
-pub enum Specifier {
-    Created,
-    Modified,
-    Accessed,
-    Subpath,
-    Type,
-    Unknown,
-}
-
 pub enum Modifier {
     LowerCase,
     UpperCase,
@@ -271,23 +265,15 @@ pub enum Modifier {
     Unkown,
 }
 
-#[derive(Debug)]
-pub enum Token {
-    Month,
-    Year,
-    MimeType,
-    Size,
-    Extension,
-    Width,
-    Height,
-    Kind,
-    Unknown,
+impl From<&str> for Modifier {
+    fn from(value: &str) -> Self {
+        match value {
+            "lowercase" => Self::LowerCase,
+            "uppercase" => Self::UpperCase,
+            "names" => Self::Names,
+            _ => Self::Unkown,
+        }
+    }
 }
 
 pub type Days = f64;
-
-pub enum AgeType {
-    Created,
-    Accessed,
-    Modified,
-}
