@@ -1,10 +1,9 @@
-use hazel_rs::{job::Jobs, Result};
+use hazel_rs::{job::Job, Result};
 
 fn main() -> Result<()> {
-    let file = std::fs::read("jobs.sample.yaml")?;
-    let job_list: Jobs = serde_yaml::from_slice(&file).expect("failed to parse yaml");
+    let jobs = Job::from_file("jobs.sample.yaml")?;
 
-    for job in job_list.jobs {
+    for job in jobs {
         job.run()?;
     }
 

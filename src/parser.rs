@@ -1,12 +1,11 @@
+use crate::item::Item;
 use crate::{error::AppError, Result};
-use chrono::{Datelike, NaiveDateTime};
-use file_format::{FileFormat, Kind};
+use chrono::Datelike;
+use file_format::Kind;
 use fs_extra::dir::CopyOptions;
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 use pest_derive::Parser;
-use std::os::unix::prelude::MetadataExt;
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::{fs::DirEntry, path::PathBuf};
 
 #[derive(Parser)]
@@ -14,17 +13,18 @@ use std::{fs::DirEntry, path::PathBuf};
 struct TokenParser;
 
 /// Replaces tokens in the Job's pattern.
-pub fn parse_pattern(pattern: &str, entry: &DirEntry) -> Result<PathBuf> {
+pub fn parse_pattern(pattern: &str, item: &Item) -> Result<PathBuf> {
     process_items(pattern, |variable, component| {
         let tokens = variable.into_inner();
 
-        process_tokens(tokens, entry, component)?;
+        process_variables(tokens, item, component)?;
 
         Ok(())
     })
 }
 
-fn process_tokens(mut tokens: Pairs<Rule>, entry: &DirEntry, component: &mut String) -> Result<()> {
+/// Replaces variables in the pattern with values.
+fn process_variables(mut tokens: Pairs<Rule>, item: &Item, component: &mut String) -> Result<()> {
     // Get the first of 3 fields in a variable (token:specifier:modifier)
     if let Some(token) = tokens.next() {
         let mut specifier: Option<Specifier> = None;
@@ -49,25 +49,25 @@ fn process_tokens(mut tokens: Pairs<Rule>, entry: &DirEntry, component: &mut Str
         match token.as_str().into() {
             Token::Year => {
                 if let Some(specifier) = specifier {
-                    let time = get_entry_time(entry, specifier)?;
+                    let time = item.datetime(specifier)?;
                     component.push_str(&time.year().to_string());
                 }
             }
             Token::Month => {
                 if let Some(specifier) = specifier {
-                    let time = get_entry_time(entry, specifier)?;
+                    let time = item.datetime(specifier)?;
                     component.push_str(&time.month().to_string());
                 }
             }
             Token::Day => {
                 if let Some(specifier) = specifier {
-                    let time = get_entry_time(entry, specifier)?;
+                    let time = item.datetime(specifier)?;
                     component.push_str(&time.day().to_string());
                 }
             }
             Token::MimeType => {
-                if entry.path().is_file() {
-                    let mime = mime_guess::from_path(entry.path());
+                if item.is_file() {
+                    let mime = mime_guess::from_path(item.path());
                     let first = mime.first_or_text_plain();
 
                     component.push_str(first.type_().as_str());
@@ -76,39 +76,38 @@ fn process_tokens(mut tokens: Pairs<Rule>, entry: &DirEntry, component: &mut Str
                 }
             }
             Token::Extension => {
-                if entry.path().is_file() {
-                    if let Some(ext) = entry.path().extension() {
+                if item.is_file() {
+                    if let Some(ext) = item.path().extension() {
                         component.push_str(ext.to_str().unwrap());
                     }
                 }
             }
             Token::Size => {
-                if entry.path().is_file() {
-                    let meta = entry.metadata()?;
-                    component.push_str(&meta.size().to_string());
+                if item.is_file() {
+                    component.push_str(&item.size().to_string());
                 }
             }
             Token::Kind => {
-                if entry.path().is_file() {
-                    let format = FileFormat::from_file(entry.path())?;
+                if item.is_file() {
+                    if let Some(kind) = item.kind() {
+                        match kind {
+                            Kind::Application => {
+                                let guess = mime_guess::from_path(item.path());
 
-                    match format.kind() {
-                        Kind::Application => {
-                            let guess = mime_guess::from_path(entry.path());
-
-                            if let Some(first) = guess.first() {
-                                for p in first.params() {
-                                    println!("{p:?}");
+                                if let Some(first) = guess.first() {
+                                    for p in first.params() {
+                                        println!("{p:?}");
+                                    }
+                                    component.push_str(first.type_().as_ref());
                                 }
-                                component.push_str(first.type_().as_ref());
                             }
+                            Kind::Audio => component.push_str("audio"),
+                            Kind::Font => component.push_str("font"),
+                            Kind::Image => component.push_str("image"),
+                            Kind::Model => component.push_str("model"),
+                            Kind::Text => component.push_str("text"),
+                            Kind::Video => component.push_str("video"),
                         }
-                        Kind::Audio => component.push_str("audio"),
-                        Kind::Font => component.push_str("font"),
-                        Kind::Image => component.push_str("image"),
-                        Kind::Model => component.push_str("model"),
-                        Kind::Text => component.push_str("text"),
-                        Kind::Video => component.push_str("video"),
                     }
                 }
             }
@@ -121,6 +120,7 @@ fn process_tokens(mut tokens: Pairs<Rule>, entry: &DirEntry, component: &mut Str
     Ok(())
 }
 
+/// Process the items in the component of the path.
 fn process_items<F>(pattern: &str, f: F) -> Result<PathBuf>
 where
     F: Fn(Pair<Rule>, &mut String) -> Result<()> + Copy,
@@ -157,36 +157,6 @@ where
     Ok(parsed_path)
 }
 
-fn get_entry_time(entry: &DirEntry, specifier: Specifier) -> Result<NaiveDateTime> {
-    let meta = entry.metadata()?;
-
-    match specifier {
-        Specifier::Created => {
-            let created = meta.created()?;
-            systemtime_to_date(&created)
-        }
-        Specifier::Modified => {
-            let modified = meta.modified()?;
-            systemtime_to_date(&modified)
-        }
-        Specifier::Accessed => {
-            let accessed = meta.accessed()?;
-            systemtime_to_date(&accessed)
-        }
-        _ => Err(AppError::UnkownSpecifier),
-    }
-}
-
-fn systemtime_to_date(time: &SystemTime) -> Result<NaiveDateTime> {
-    let time_since = time.duration_since(UNIX_EPOCH)?;
-
-    if let Some(datetime) = NaiveDateTime::from_timestamp_millis(time_since.as_millis() as i64) {
-        Ok(datetime)
-    } else {
-        Err(AppError::ConvertTime)
-    }
-}
-
 fn _group_by_date_range(entry: &DirEntry, destination: &str, thresholds: &[f64]) -> Result<()> {
     let days_since_created = _days_since_created(entry)?;
     let source = entry.path();
@@ -207,7 +177,7 @@ fn _group_by_date_range(entry: &DirEntry, destination: &str, thresholds: &[f64])
     Ok(())
 }
 
-fn _days_since_created(entry: &DirEntry) -> Result<Days> {
+fn _days_since_created(entry: &DirEntry) -> Result<f64> {
     let file_meta = entry.metadata()?;
 
     let created = file_meta.created()?;
@@ -283,5 +253,3 @@ impl From<&str> for Modifier {
         }
     }
 }
-
-pub type Days = f64;

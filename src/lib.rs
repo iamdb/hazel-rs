@@ -1,7 +1,8 @@
 use crate::error::AppError;
 
-pub mod error;
+mod error;
+mod item;
 pub mod job;
-pub mod parser;
+mod parser;
 
 pub type Result<T> = std::result::Result<T, AppError>;
