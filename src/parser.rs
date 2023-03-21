@@ -59,6 +59,12 @@ fn process_tokens(mut tokens: Pairs<Rule>, entry: &DirEntry, component: &mut Str
                     component.push_str(&time.month().to_string());
                 }
             }
+            Token::Day => {
+                if let Some(specifier) = specifier {
+                    let time = get_entry_time(entry, specifier)?;
+                    component.push_str(&time.day().to_string());
+                }
+            }
             Token::MimeType => {
                 if entry.path().is_file() {
                     let mime = mime_guess::from_path(entry.path());
@@ -215,6 +221,7 @@ fn _days_since_created(entry: &DirEntry) -> Result<Days> {
 pub enum Token {
     Month,
     Year,
+    Day,
     MimeType,
     Size,
     Extension,
@@ -229,6 +236,7 @@ impl From<&str> for Token {
         match value {
             "year" => Self::Year,
             "month" => Self::Month,
+            "day" => Self::Day,
             "mime" => Self::MimeType,
             "extension" => Self::Extension,
             "size" => Self::Size,
