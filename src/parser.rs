@@ -111,8 +111,8 @@ fn process_variables(mut tokens: Pairs<Rule>, item: &Item, component: &mut Strin
                     }
                 }
             }
-            Token::Width => todo!(),
-            Token::Height => todo!(),
+            Token::Width => component.push_str(&item.width()?.to_string()),
+            Token::_Height => todo!(),
             Token::Unknown => {}
         }
     }
@@ -196,7 +196,7 @@ pub enum Token {
     Size,
     Extension,
     Width,
-    Height,
+    _Height,
     Kind,
     Unknown,
 }
@@ -211,6 +211,7 @@ impl From<&str> for Token {
             "extension" => Self::Extension,
             "size" => Self::Size,
             "kind" => Self::Kind,
+            "width" => Self::Width,
             _ => Self::Unknown,
         }
     }
@@ -220,8 +221,8 @@ pub enum Specifier {
     Created,
     Modified,
     Accessed,
-    Subpath,
-    Type,
+    _Subpath,
+    _Type,
     Unknown,
 }
 

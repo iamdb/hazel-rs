@@ -1,4 +1,4 @@
-token      =  { ^"year" | ^"month" | ^"day" | ^"mime" | ^"extension" | ^"kind" | ^"size" }
+token      =  { ^"year" | ^"month" | ^"day" | ^"mime" | ^"extension" | ^"kind" | ^"size" | ^"width" }
 threshold  =  { ASCII_DIGIT+ }
 thresholds =  { "["? ~ (threshold+ ~ ","?)+ ~ "]"? }
 modifier   =  { ^"lowercase" | ^"uppercase" | ^"names" }

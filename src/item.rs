@@ -1,7 +1,8 @@
 use chrono::NaiveDateTime;
 use file_format::{FileFormat, Kind};
+use snafu::*;
 
-use crate::{error::AppError, parser::Specifier, Result};
+use crate::{error::AppError, mediainfo, parser::Specifier, Result};
 use std::{
     ffi::OsString,
     fs::{DirEntry, Metadata},
@@ -9,6 +10,11 @@ use std::{
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
+
+#[derive(Snafu, Debug)]
+enum ItemError {
+    Failure,
+}
 
 pub struct Item<'i> {
     entry: &'i DirEntry,
@@ -97,6 +103,55 @@ impl<'i> Item<'i> {
 
     pub(crate) fn kind(&self) -> Option<Kind> {
         self.format.as_ref().map(|f| f.kind())
+    }
+
+    pub(crate) fn _move_to(&self, dest: PathBuf) -> Result<()> {
+        if self.is_dir() {
+            fs_extra::dir::move_dir(self.entry.path(), dest, &fs_extra::dir::CopyOptions::new())?;
+        } else {
+            fs_extra::file::move_file(
+                self.entry.path(),
+                dest,
+                &fs_extra::file::CopyOptions::new(),
+            )?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn _copy_to(&self, dest: PathBuf) -> Result<()> {
+        if self.is_dir() {
+            fs_extra::dir::copy(self.entry.path(), dest, &fs_extra::dir::CopyOptions::new())?;
+        } else {
+            fs_extra::file::copy(self.entry.path(), dest, &fs_extra::file::CopyOptions::new())?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn width(&self) -> Result<usize> {
+        if let Some(format) = &self.format {
+            match format.kind() {
+                Kind::Image => {
+                    let info = mediainfo::MediaInfo::new();
+                    if info.open(self.entry.path().to_str().unwrap()) {
+                        println!(
+                            "{} ************* {}",
+                            self.entry.path().display(),
+                            info.inform()
+                        );
+
+                        info.close();
+                    } else {
+                        println!("************* DID NOT OPEN")
+                    }
+                }
+                Kind::Video => {}
+                _ => {}
+            }
+        }
+
+        Ok(0)
     }
 }
 

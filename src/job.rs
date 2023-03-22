@@ -7,7 +7,7 @@ use std::{ffi::OsString, fs, path::Path};
 pub struct Job {
     name: String,
     source: String,
-    destination: String,
+    destination: Option<String>,
     pattern: String,
     recursive: Option<bool>,
     watch: Option<bool>,
@@ -16,16 +16,16 @@ pub struct Job {
 /// A list of Job definitions
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
 pub struct Jobs {
-    pub jobs: Vec<Job>,
+    jobs: Vec<Job>,
 }
 
-impl IntoIterator for Jobs {
-    type Item = Job;
+impl Jobs {
+    pub fn run_all(&self) -> Result<()> {
+        for job in &self.jobs {
+            job.run()?;
+        }
 
-    type IntoIter = std::vec::IntoIter<Job>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.jobs.into_iter()
+        Ok(())
     }
 }
 
@@ -48,7 +48,7 @@ impl Job {
 
         Ok(Self {
             name: name.to_string(),
-            destination: destination.to_string(),
+            destination: Some(destination.to_string()),
             recursive: Some(recursive),
             watch: Some(watch),
             pattern: pattern.to_string(),
@@ -65,27 +65,29 @@ impl Job {
 
     /// Runs a Job
     pub fn run(&self) -> Result<()> {
-        process_source(&self.source, self.recursive.unwrap_or(false), |item| {
-            let dest = parser::parse_pattern(&self.pattern, item)?;
+        let dest = self.destination.as_ref().unwrap_or(&self.source);
 
-            // TODO: MISSING DIRECTORY NAME FROM OUTPUT WHEN ITEM IS DIRECTORY
-            if item.is_file() {
-                println!(
-                    "file:\t{}/{}/{}",
-                    self.destination,
-                    dest.to_str().unwrap(),
-                    item.file_name()
-                        .unwrap_or(OsString::new())
-                        .to_string_lossy()
-                );
-            } else if item.is_dir() {
-                println!(
-                    "dir:\t{}/{}/{}",
-                    self.destination,
-                    dest.to_str().unwrap(),
-                    item.dir_name().unwrap_or(String::new())
-                );
-            }
+        process_source(&self.source, self.recursive.unwrap_or(false), |item| {
+            let pattern = parser::parse_pattern(&self.pattern, item)?;
+
+            // TODO: Item operations go here.
+            // if item.is_file() {
+            //     println!(
+            //         "file:\t{}/{}/{}",
+            //         dest,
+            //         pattern.to_str().unwrap(),
+            //         item.file_name()
+            //             .unwrap_or(OsString::new())
+            //             .to_string_lossy()
+            //     );
+            // } else if item.is_dir() {
+            //     println!(
+            //         "dir:\t{}/{}/{}",
+            //         dest,
+            //         pattern.to_str().unwrap(),
+            //         item.dir_name().unwrap_or(String::new())
+            //     );
+            // }
 
             Ok(())
         })?;
