@@ -251,6 +251,7 @@ dependencies = [
  "pest_derive",
  "regex",
  "serde",
+ "serde_json",
  "serde_yaml",
  "snafu",
  "widestring",
@@ -580,6 +581,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.94"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c533a59c9d8a93a09c6ab31f0fd5e5f4dd1b8fc9434804029839884765d04ea"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
 ]
 
 [[package]]

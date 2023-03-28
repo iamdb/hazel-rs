@@ -2,7 +2,7 @@
 
 A utility to watch and organize folders inspired by Hazel for MacOS.
 
-This is very much an alpha version. No guarantees.
+This pre-alpha application is in active development and is not functional yet, let alone useful for anyone. Some of the info in the README is aspirational and not completed. No guarantees.
 
 ## Getting started
 

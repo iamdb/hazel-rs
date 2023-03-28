@@ -2,7 +2,12 @@ use chrono::NaiveDateTime;
 use file_format::{FileFormat, Kind};
 use snafu::*;
 
-use crate::{error::AppError, mediainfo, parser::Specifier, Result};
+use crate::{
+    error::AppError,
+    mediainfo::{self, MediaInfo, StreamKind},
+    parser::Specifier,
+    Result,
+};
 use std::{
     ffi::OsString,
     fs::{DirEntry, Metadata},
@@ -20,6 +25,7 @@ pub struct Item<'i> {
     entry: &'i DirEntry,
     meta: Metadata,
     format: Option<FileFormat>,
+    media_info: Option<MediaInfo>,
 }
 
 impl<'i> Item<'i> {
@@ -36,7 +42,31 @@ impl<'i> Item<'i> {
             entry,
             meta: entry.metadata()?,
             format,
+            media_info: None,
         })
+    }
+
+    pub(crate) fn format(&mut self) -> FileFormat {
+        if let Some(f) = &self.format {
+            f.to_owned()
+        } else {
+            let format =
+                FileFormat::from_file(self.entry.path()).expect("failed to get file format");
+            self.format = Some(format.clone());
+
+            return format;
+        }
+    }
+
+    pub(crate) fn media_info(&mut self) -> MediaInfo {
+        if let Some(m) = &self.media_info {
+            m.clone()
+        } else {
+            let mediainfo = MediaInfo::new();
+            self.media_info = Some(mediainfo.clone());
+
+            mediainfo
+        }
     }
 
     pub(crate) fn is_file(&self) -> bool {
@@ -133,25 +163,40 @@ impl<'i> Item<'i> {
         if let Some(format) = &self.format {
             match format.kind() {
                 Kind::Image => {
-                    let info = mediainfo::MediaInfo::new();
-                    if info.open(self.entry.path().to_str().unwrap()) {
-                        println!(
-                            "{} ************* {}",
-                            self.entry.path().display(),
-                            info.inform()
-                        );
+                    let mi = MediaInfo::new();
+                    if mi.open(self.entry.path().to_str().unwrap()) {
+                        let width: usize = mi
+                            .get_string(StreamKind::Image, "Width")
+                            .parse()
+                            .expect("failed to parse width");
 
-                        info.close();
+                        mi.close();
+
+                        Ok(width)
                     } else {
-                        println!("************* DID NOT OPEN")
+                        Err(AppError::UnkownToken)
                     }
                 }
-                Kind::Video => {}
-                _ => {}
-            }
-        }
+                Kind::Video => {
+                    let mi = MediaInfo::new();
+                    if mi.open(self.entry.path().to_str().unwrap()) {
+                        let width: usize = mi
+                            .get_string(StreamKind::Video, "Width")
+                            .parse()
+                            .expect("failed to parse width");
 
-        Ok(0)
+                        mi.close();
+
+                        Ok(width)
+                    } else {
+                        Err(AppError::UnkownToken)
+                    }
+                }
+                _ => Err(AppError::UnkownToken),
+            }
+        } else {
+            Err(AppError::UnkownToken)
+        }
     }
 }
 

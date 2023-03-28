@@ -70,24 +70,24 @@ impl Job {
         process_source(&self.source, self.recursive.unwrap_or(false), |item| {
             let pattern = parser::parse_pattern(&self.pattern, item)?;
 
-            // TODO: Item operations go here.
-            // if item.is_file() {
-            //     println!(
-            //         "file:\t{}/{}/{}",
-            //         dest,
-            //         pattern.to_str().unwrap(),
-            //         item.file_name()
-            //             .unwrap_or(OsString::new())
-            //             .to_string_lossy()
-            //     );
-            // } else if item.is_dir() {
-            //     println!(
-            //         "dir:\t{}/{}/{}",
-            //         dest,
-            //         pattern.to_str().unwrap(),
-            //         item.dir_name().unwrap_or(String::new())
-            //     );
-            // }
+            //TODO: Item operations go here.
+            if item.is_file() {
+                println!(
+                    "file:\t{}/{}/{}",
+                    dest,
+                    pattern.to_str().unwrap(),
+                    item.file_name()
+                        .unwrap_or(OsString::new())
+                        .to_string_lossy()
+                );
+            } else if item.is_dir() {
+                println!(
+                    "dir:\t{}/{}/{}",
+                    dest,
+                    pattern.to_str().unwrap(),
+                    item.dir_name().unwrap_or(String::new())
+                );
+            }
 
             Ok(())
         })?;
