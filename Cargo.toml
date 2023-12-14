@@ -5,9 +5,9 @@ edition = "2021"
 rust-version = "1.67"
 
 [dependencies]
-file-format = "0.15"
+file-format = "0.17"
 chrono = "0.4"
-notify = { version = "5", features = ["serde"] } 
+notify = { version = "6", features = ["serde"] } 
 regex = "1.7"
 snafu = "0.7"
 pest = "2"
@@ -19,3 +19,6 @@ serde_yaml = "0.9"
 libc = "0.2"
 widestring = "1"
 serde_json = "1"
+
+[build-dependencies]
+pkg-config = "0.3"

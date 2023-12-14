@@ -1,6 +1,8 @@
 use snafu::prelude::*;
 use std::{io, time::SystemTimeError};
 
+use crate::item::ItemError;
+
 #[derive(Snafu, Debug)]
 pub enum AppError {
     PathExists,
@@ -12,9 +14,9 @@ pub enum AppError {
     IO {
         error: io::ErrorKind,
     },
-    #[snafu(display("There was an error."))]
+    #[snafu(display("{error}"))]
     FsExtra {
-        error: fs_extra::error::ErrorKind,
+        error: fs_extra::error::Error,
     },
     #[snafu(display("{error}"))]
     SystemTimeError {
@@ -24,6 +26,10 @@ pub enum AppError {
     RegexError {
         error: regex::Error,
     },
+    #[snafu(display("{error}"))]
+    ParseError {
+        error: serde_yaml::Error,
+    },
     #[snafu(display("Failed to convert time."))]
     ConvertTime,
     #[snafu(display("A token used in a pattern is unknown."))]
@@ -32,6 +38,9 @@ pub enum AppError {
     UnkownSpecifier,
     #[snafu(display("A modifier used in a pattern is unknown."))]
     UnkownModifier,
+    ItemError {
+        message: String,
+    },
 }
 
 impl From<io::Error> for AppError {
@@ -62,6 +71,20 @@ impl From<regex::Error> for AppError {
 
 impl From<fs_extra::error::Error> for AppError {
     fn from(value: fs_extra::error::Error) -> Self {
-        Self::FsExtra { error: value.kind }
+        Self::FsExtra { error: value }
+    }
+}
+
+impl From<ItemError> for AppError {
+    fn from(value: ItemError) -> Self {
+        Self::ItemError {
+            message: value.to_string(),
+        }
+    }
+}
+
+impl From<serde_yaml::Error> for AppError {
+    fn from(value: serde_yaml::Error) -> Self {
+        Self::ParseError { error: value }
     }
 }

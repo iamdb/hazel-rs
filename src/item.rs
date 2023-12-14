@@ -2,11 +2,11 @@ use chrono::NaiveDateTime;
 use file_format::{FileFormat, Kind};
 use snafu::*;
 
+#[allow(unused_imports)]
 use crate::{
     error::AppError,
     mediainfo::{self, MediaInfo, StreamKind},
     parser::Specifier,
-    Result,
 };
 use std::{
     ffi::OsString,
@@ -17,10 +17,55 @@ use std::{
 };
 
 #[derive(Snafu, Debug)]
-enum ItemError {
+pub enum ItemError {
+    #[snafu(display("Item failure"))]
     Failure,
+    #[snafu(display("Failed to open item"))]
+    Open,
+    #[snafu(display("Failed to get item metadata"))]
+    Metadata,
+    #[snafu(display("Unknown specifier on item"))]
+    UnknownSpecifier,
+    #[snafu(display("Error getting item format"))]
+    Format,
+    #[snafu(display("Error converting time"))]
+    ConvertTime,
+    #[snafu(display("I/O error"))]
+    IO,
+    #[snafu(display("Error parsing regex"))]
+    Regex,
+    #[snafu(display("Failed to parse int"))]
+    ParseIntError,
 }
 
+impl From<fs_extra::error::Error> for ItemError {
+    fn from(_value: fs_extra::error::Error) -> Self {
+        Self::IO
+    }
+}
+
+impl From<std::io::Error> for ItemError {
+    fn from(_value: std::io::Error) -> Self {
+        Self::IO
+    }
+}
+
+impl From<regex::Error> for ItemError {
+    fn from(_value: regex::Error) -> Self {
+        Self::Regex
+    }
+}
+
+impl From<std::num::ParseIntError> for ItemError {
+    fn from(_value: std::num::ParseIntError) -> Self {
+        Self::ParseIntError
+    }
+}
+
+type Result<T> = std::result::Result<T, ItemError>;
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Item<'i> {
     entry: &'i DirEntry,
     meta: Metadata,
@@ -28,6 +73,7 @@ pub struct Item<'i> {
     media_info: Option<MediaInfo>,
 }
 
+#[allow(dead_code)]
 impl<'i> Item<'i> {
     pub(crate) fn new(entry: &'i DirEntry) -> Result<Item<'i>> {
         let format = if entry.path().is_dir() {
@@ -38,12 +84,16 @@ impl<'i> Item<'i> {
             None
         };
 
-        Ok(Item {
-            entry,
-            meta: entry.metadata()?,
-            format,
-            media_info: None,
-        })
+        if let Ok(meta) = entry.metadata() {
+            Ok(Item {
+                entry,
+                meta,
+                format,
+                media_info: None,
+            })
+        } else {
+            Err(ItemError::Metadata)
+        }
     }
 
     pub(crate) fn format(&mut self) -> FileFormat {
@@ -52,9 +102,9 @@ impl<'i> Item<'i> {
         } else {
             let format =
                 FileFormat::from_file(self.entry.path()).expect("failed to get file format");
-            self.format = Some(format.clone());
+            self.format = Some(format);
 
-            return format;
+            format
         }
     }
 
@@ -107,15 +157,27 @@ impl<'i> Item<'i> {
     }
 
     pub(crate) fn created(&self) -> Result<NaiveDateTime> {
-        systemtime_to_date(&self.meta.created()?)
+        if let Ok(meta) = &self.meta.created() {
+            systemtime_to_date(meta)
+        } else {
+            Err(ItemError::Metadata)
+        }
     }
 
     pub(crate) fn modified(&self) -> Result<NaiveDateTime> {
-        systemtime_to_date(&self.meta.modified()?)
+        if let Ok(meta) = &self.meta.created() {
+            systemtime_to_date(meta)
+        } else {
+            Err(ItemError::Metadata)
+        }
     }
 
     pub(crate) fn accessed(&self) -> Result<NaiveDateTime> {
-        systemtime_to_date(&self.meta.accessed()?)
+        if let Ok(meta) = &self.meta.created() {
+            systemtime_to_date(meta)
+        } else {
+            Err(ItemError::Metadata)
+        }
     }
 
     pub(crate) fn size(&self) -> u64 {
@@ -127,7 +189,7 @@ impl<'i> Item<'i> {
             Specifier::Created => self.created(),
             Specifier::Modified => self.modified(),
             Specifier::Accessed => self.accessed(),
-            _ => Err(AppError::UnkownSpecifier),
+            _ => Err(ItemError::UnknownSpecifier),
         }
     }
 
@@ -135,7 +197,7 @@ impl<'i> Item<'i> {
         self.format.as_ref().map(|f| f.kind())
     }
 
-    pub(crate) fn _move_to(&self, dest: PathBuf) -> Result<()> {
+    pub(crate) fn move_to(&self, dest: PathBuf) -> Result<()> {
         if self.is_dir() {
             fs_extra::dir::move_dir(self.entry.path(), dest, &fs_extra::dir::CopyOptions::new())?;
         } else {
@@ -165,48 +227,79 @@ impl<'i> Item<'i> {
                 Kind::Image => {
                     let mi = MediaInfo::new();
                     if mi.open(self.entry.path().to_str().unwrap()) {
-                        let width: usize = mi
-                            .get_string(StreamKind::Image, "Width")
-                            .parse()
-                            .expect("failed to parse width");
+                        let width: usize = mi.get_string(StreamKind::Image, "Width").parse()?;
 
                         mi.close();
 
                         Ok(width)
                     } else {
-                        Err(AppError::UnkownToken)
+                        Err(ItemError::Open)
                     }
                 }
                 Kind::Video => {
                     let mi = MediaInfo::new();
                     if mi.open(self.entry.path().to_str().unwrap()) {
-                        let width: usize = mi
-                            .get_string(StreamKind::Video, "Width")
-                            .parse()
-                            .expect("failed to parse width");
+                        let width: usize = mi.get_string(StreamKind::Video, "Width").parse()?;
 
                         mi.close();
 
                         Ok(width)
                     } else {
-                        Err(AppError::UnkownToken)
+                        Err(ItemError::Open)
                     }
                 }
-                _ => Err(AppError::UnkownToken),
+                _ => Err(ItemError::Failure),
             }
         } else {
-            Err(AppError::UnkownToken)
+            Err(ItemError::Format)
+        }
+    }
+
+    pub(crate) fn height(&self) -> Result<usize> {
+        if let Some(format) = &self.format {
+            match format.kind() {
+                Kind::Image => {
+                    let mi = MediaInfo::new();
+                    if mi.open(self.entry.path().to_str().unwrap()) {
+                        let height: usize = mi.get_string(StreamKind::Image, "Height").parse()?;
+
+                        mi.close();
+
+                        Ok(height)
+                    } else {
+                        Err(ItemError::Open)
+                    }
+                }
+                Kind::Video => {
+                    let mi = MediaInfo::new();
+                    if mi.open(self.entry.path().to_str().unwrap()) {
+                        let height: usize = mi.get_string(StreamKind::Video, "Height").parse()?;
+
+                        mi.close();
+
+                        Ok(height)
+                    } else {
+                        Err(ItemError::Open)
+                    }
+                }
+                _ => Err(ItemError::Failure),
+            }
+        } else {
+            Err(ItemError::Format)
         }
     }
 }
 
 /// Convert SystemTime into the DateTime it represents.
 fn systemtime_to_date(time: &SystemTime) -> Result<NaiveDateTime> {
-    let time_since = time.duration_since(UNIX_EPOCH)?;
-
-    if let Some(datetime) = NaiveDateTime::from_timestamp_millis(time_since.as_millis() as i64) {
-        Ok(datetime)
+    if let Ok(time_since) = time.duration_since(UNIX_EPOCH) {
+        if let Some(datetime) = NaiveDateTime::from_timestamp_millis(time_since.as_millis() as i64)
+        {
+            Ok(datetime)
+        } else {
+            Err(ItemError::ConvertTime)
+        }
     } else {
-        Err(AppError::ConvertTime)
+        Err(ItemError::Failure)
     }
 }

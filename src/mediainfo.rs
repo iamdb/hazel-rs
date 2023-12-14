@@ -28,6 +28,7 @@ pub enum InfoKind {
     _Max,
 }
 
+#[allow(dead_code)]
 extern "C" {
     fn MediaInfo_New() -> *mut c_void;
     fn MediaInfo_Close(handle: *mut c_void);
@@ -49,6 +50,7 @@ extern "C" {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MediaInfo {
     handle: *mut c_void,
     is_open: bool,
@@ -66,8 +68,6 @@ impl MediaInfo {
         //mi.option("Complete", "1");
         mi.option("Output", "JSON");
 
-        //println!("{}", mi.option("Info_Parameters", ""));
-
         mi
     }
 
@@ -78,6 +78,7 @@ impl MediaInfo {
         result == 1
     }
 
+    #[allow(dead_code)]
     pub(crate) fn is_open(&self) -> bool {
         self.is_open
     }

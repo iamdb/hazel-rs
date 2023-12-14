@@ -1,6 +1,10 @@
 use crate::{item::Item, parser, AppError, Result};
 use serde::{Deserialize, Serialize};
-use std::{ffi::OsString, fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 /// A Job defines the renaming pattern to apply to the source directory.
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
@@ -58,36 +62,35 @@ impl Job {
 
     pub fn from_file(path: &str) -> Result<Jobs> {
         let file = std::fs::read(path)?;
-        let job_list: Jobs = serde_yaml::from_slice(&file).expect("failed to parse yaml");
+        let job_list: Jobs = serde_yaml::from_slice(&file)?;
 
         Ok(job_list)
     }
 
     /// Runs a Job
     pub fn run(&self) -> Result<()> {
-        let dest = self.destination.as_ref().unwrap_or(&self.source);
+        let base_dest = self.destination.as_ref().unwrap_or(&self.source);
 
-        process_source(&self.source, self.recursive.unwrap_or(false), |item| {
+        process_source(&self.source, self.recursive.unwrap_or_default(), |item| {
             let pattern = parser::parse_pattern(&self.pattern, item)?;
 
-            //TODO: Item operations go here.
+            let mut item_name = "".to_string();
+
             if item.is_file() {
-                println!(
-                    "file:\t{}/{}/{}",
-                    dest,
-                    pattern.to_str().unwrap(),
-                    item.file_name()
-                        .unwrap_or(OsString::new())
-                        .to_string_lossy()
-                );
+                item_name = item
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
             } else if item.is_dir() {
-                println!(
-                    "dir:\t{}/{}/{}",
-                    dest,
-                    pattern.to_str().unwrap(),
-                    item.dir_name().unwrap_or(String::new())
-                );
+                item_name = item.dir_name().unwrap_or_default();
             }
+
+            let dest = format!("{}/{}/{}", base_dest, pattern.to_str().unwrap(), item_name);
+
+            //item.move_to(PathBuf::from_str(&dest).unwrap())?;
+
+            println!("{}/{item_name}\n\t\t{dest}", self.source);
 
             Ok(())
         })?;
@@ -99,15 +102,15 @@ impl Job {
 /// Read the list of entries from the source directory and process each one.
 fn process_source<F>(path: &str, recursive: bool, f: F) -> Result<()>
 where
-    F: FnOnce(&Item) -> Result<()> + Copy,
+    F: FnOnce(&mut Item) -> Result<()> + Copy,
 {
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let item = Item::new(&entry)?;
+        let mut item = Item::new(&entry)?;
 
         if recursive {
             if item.is_file() {
-                f(&item)?;
+                f(&mut item)?;
             } else if item.is_dir() {
                 process_source(
                     item.path()
@@ -118,7 +121,7 @@ where
                 )?;
             }
         } else {
-            f(&item)?;
+            f(&mut item)?;
         }
     }
 

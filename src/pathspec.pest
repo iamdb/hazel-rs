@@ -1,11 +1,15 @@
-token      =  { ^"year" | ^"month" | ^"day" | ^"mime" | ^"extension" | ^"kind" | ^"size" | ^"width" }
-threshold  =  { ASCII_DIGIT+ }
+token      =  { ^"year" | ^"month" | ^"day" | ^"mime" | ^"extension" | ^"kind" | ^"size" | ^"width" | ^"height" }
+threshold_size = { "B" | "K" | "M" | "G" }
+threshold_amount = { ASCII_DIGIT+ }
+gt  = { ">" }
+lt = { "<" }
+threshold  =  { (gt | lt) ~ threshold_amount  ~ threshold_size }
 thresholds =  { "["? ~ (threshold+ ~ ","?)+ ~ "]"? }
 modifier   =  { ^"lowercase" | ^"uppercase" | ^"names" }
 modifiers  =  { modifier ~ "|"? ~ modifier? }
 specifier  =  { ^"created" | ^"modified" | ^"accessed" }
 variable   = ${ "{"{,1} ~ token ~ thresholds? ~ ":"? ~ specifier? ~ ":"? ~ modifiers? ~ "}"{,1} }
 text       =  { (CASED_LETTER | LETTER_NUMBER | CONNECTOR_PUNCTUATION | DASH_PUNCTUATION | INITIAL_PUNCTUATION | FINAL_PUNCTUATION | SPACING_MARK)+ }
-item       =  { variable | text }
-component  =  { "/"{,1}? ~ item+ }
+component  =  { "/"{,1}? ~ (variable | text)+ }
 path       =  { component+ }
+
